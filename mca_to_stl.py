@@ -7,16 +7,32 @@ from stl import mesh
 
 def main():
 
-    x1 = -51
-    y1 = -64
-    z1 = -26
+    """
+    Two coordinate points may be chosen: x1,y1,z1 and x2,y2,z2
+    The returned .stl file will contain everything within
+    the rectangular block with the coordinate points as the
+    diagonally opposite corners of the block. The order in 
+    which the coordinates are given does not matter.
+    """
 
-    x2 = -10
-    y2 = 73
-    z2 = 4
+    x1 = 0
+    y1 = 62
+    z1 = 0
 
-    region_path = r"C:\Users\pontu\GitHub\mca_to_stl\region"
+    x2 = 31
+    y2 = 79
+    z2 = 31
 
+    """ 
+    The path to the Minecraft world folder needs to be specified.
+    The default .minecraft folder location in Windows is in the AppData folder. 
+    An example of a valid path is: C:/Users/bob/AppData/Roaming/.minecraft/saves/my_world
+    Where username is 'bob' and the name of the world is 'my_world'.
+    """
+    
+    world_path = r"C:\Users\pontu\GitHub\mca_to_stl" # <-- replace with actual path to world
+
+    region_path = world_path + r"\region"
     model = get_model(x1, y1, z1, x2, y2, z2, region_path)
 
     ignored_blocks = ['air', 'cave_air', 'water', 'short_grass', 'tall_grass', 'seagrass', 'tall_seagrass']
@@ -44,6 +60,8 @@ def get_model(x1, y1, z1, x2, y2, z2, region_path):
         temp = y2
         y2 = y1
         y1 = temp
+    y1 = max(y1, -64)
+    y2 = min(y2, 320)
 
     # Set z1 <= z2
     if z2 < z1:
@@ -86,6 +104,7 @@ def get_model(x1, y1, z1, x2, y2, z2, region_path):
     # Get chunk offsets in region files
     offsets = [[0 for _ in range(num_chunks)] for _ in range(len(regions))]
     for region in range(len(regions)):
+
         # get chunk offsets in region file regions[region]
 
         region_x = int(regions[region][regions[region].index('.', 0) + 1:regions[region].index('.', 2)])
@@ -115,8 +134,8 @@ def get_model(x1, y1, z1, x2, y2, z2, region_path):
                 NBT_data[NBT_data_index] = zlib.decompress(region.read(length - 1))
                 NBT_data_index += 1
 
-    with open('example.dat', 'wb') as f:
-        f.write(NBT_data[0])
+    #with open('example.dat', 'wb') as f:
+    #    f.write(NBT_data[0])
     
     model = [[["" for _ in range((y2-y1)+1)] for _ in range((z2-z1)+1)] for _ in range((x2-x1)+1)]
 
@@ -211,12 +230,24 @@ def get_model(x1, y1, z1, x2, y2, z2, region_path):
 def create_stl(model):
     cube_list = []
 
+    # include surrounding blocks for mesh optimization (blocks don't need mesh inbetween)
+    # resulting in smaller .stl file
+    surrounding = [True] * 6
+
     for i in range(len(model)):
         for j in range(len(model[0])):
             for k in range(len(model[0][0])):
                 if model[i][j][k]:
-                    cube = create_cube()
-                    cube.x += i * 2
+
+                    surrounding[0] = False if i == 0 else model[i-1][j][k]                     # west
+                    surrounding[1] = False if i == len(model)-1 else model[i+1][j][k]          # east
+                    surrounding[2] = False if j == 0 else model[i][j-1][k]                     # north
+                    surrounding[3] = False if j == len(model[0])-1 else model[i][j+1][k]       # south
+                    surrounding[4] = False if k == 0 else model[i][j][k-1]                     # under
+                    surrounding[5] = False if k == len(model[0][0])-1 else model[i][j][k+1]    # above
+
+                    cube = create_cube(surrounding)
+                    cube.x += (len(model) - (i+1)) * 2
                     cube.y += j * 2
                     cube.z += k * 2
                     cube_list.append(cube.data.copy())
@@ -224,7 +255,7 @@ def create_stl(model):
     minecraft_mdel = mesh.Mesh(np.concatenate(cube_list))
     minecraft_mdel.save('minecraft_model.stl')
     
-def create_cube():
+def create_cube(surrounding):
     # Define the 8 vertices of the cube
     vertices = np.array([\
     [-1, -1, -1],
@@ -235,20 +266,23 @@ def create_cube():
     [+1, -1, +1],
     [+1, +1, +1],
     [-1, +1, +1]])
+
     # Define the 12 triangles composing the cube
-    faces = np.array([\
-    [0,3,1],
-    [1,3,2],
-    [0,4,7],
-    [0,7,3],
-    [4,5,6],
-    [4,6,7],
-    [5,1,2],
-    [5,2,6],
-    [2,3,6],
-    [3,7,6],
-    [0,1,5],
-    [0,5,4]])
+    faces = []
+    if not surrounding[4]:
+        faces.extend([[0,3,1], [1,3,2]])
+    if not surrounding[1]:
+        faces.extend([[0,4,7], [0,7,3]])
+    if not surrounding[5]:
+        faces.extend([[4,5,6], [4,6,7]])
+    if not surrounding[0]:
+        faces.extend([[5,1,2], [5,2,6]])
+    if not surrounding[3]:
+        faces.extend([[2,3,6], [3,7,6]])
+    if not surrounding[2]:
+        faces.extend([[0,1,5], [0,5,4]])
+    
+    faces = np.array(faces)
     # Create the mesh
     cube = mesh.Mesh(np.zeros(faces.shape[0], dtype=mesh.Mesh.dtype))
     for i, f in enumerate(faces):
