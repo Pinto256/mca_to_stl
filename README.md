@@ -1,6 +1,6 @@
 # Minecraft World to STL Converter
 
-This Python script (mca_to_stl.py) allows you to convert a section of a Minecraft world (version 1.17+) into an STL file. You need to provide two sets of x, y, z coordinates to define the section, as well as the file path to the Minecraft world save folder.
+This Python script (mca_to_stl.py) allows you to convert a section of a Minecraft world (Java Edition 1.17+) into an STL file. You need to provide two sets of x, y, z coordinates to define the section, as well as the file path to the Minecraft world save folder.
 
 ## Prerequisites
 - Python 3.x installed on your system.
