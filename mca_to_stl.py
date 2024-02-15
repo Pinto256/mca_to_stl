@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import math
 import os
@@ -5,32 +6,7 @@ import zlib
 import struct
 from stl import mesh
 
-def main():
-
-    """
-    Two coordinate points may be chosen: x1,y1,z1 and x2,y2,z2
-    The returned .stl file will contain everything within
-    the rectangular block with the coordinate points as the
-    diagonally opposite corners of the block. The order in 
-    which the coordinates are given does not matter.
-    """
-
-    x1 = 0
-    y1 = 62
-    z1 = 0
-
-    x2 = 31
-    y2 = 79
-    z2 = 31
-
-    """ 
-    The path to the Minecraft world folder needs to be specified.
-    The default .minecraft folder location in Windows is in the AppData folder. 
-    An example of a valid path is: C:/Users/bob/AppData/Roaming/.minecraft/saves/my_world
-    Where username is 'bob' and the name of the world is 'my_world'.
-    """
-    
-    world_path = r"C:\Users\pontu\GitHub\mca_to_stl" # <-- replace with actual path to world
+def main(x1, y1, z1, x2, y2, z2, world_path):
 
     region_path = world_path + r"\region"
     model = get_model(x1, y1, z1, x2, y2, z2, region_path)
@@ -291,5 +267,15 @@ def create_cube(surrounding):
 
     return cube
 
+def parse_args():
+    try:
+        x1, y1, z1, x2, y2, z2 = map(int, sys.argv[1:7])
+        world_path = ' '.join(sys.argv[7:])
+        return x1, y1, z1, x2, y2, z2, world_path
+    except ValueError:
+        print("Invalid input. Coordinates must be integers.")
+        sys.exit(1)
+
 if __name__ == '__main__':
-    main()
+    x1, y1, z1, x2, y2, z2, world_path = parse_args()
+    main(x1, y1, z1, x2, y2, z2, world_path)
